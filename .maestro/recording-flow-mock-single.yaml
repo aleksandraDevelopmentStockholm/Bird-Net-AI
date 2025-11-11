@@ -1,0 +1,46 @@
+appId: com.amalesa.aiApp
+---
+# Test for single result scenario - verifies UI with minimal data
+# Prerequisites: Start mock server with: cd test-server && pnpm start
+- launchApp
+- openLink: "aiapp://?mockMode=true&mockScenario=single_result"
+- assertVisible: "BirdNet"
+
+# Start recording
+- extendedWaitUntil:
+    visible:
+      id: "recording-start-button"
+      enabled: true
+    timeout: 100000
+- tapOn:
+    id: "recording-start-button"
+- extendedWaitUntil:
+    visible:
+      id: "recording-stop-button"
+    timeout: 10000
+
+# Stop recording
+- tapOn:
+    id: "recording-stop-button"
+
+# Analyze with mock data (single result)
+- assertVisible:
+    id: "analyze-button"
+- tapOn:
+    id: "analyze-button"
+
+# Verify single result appears
+- extendedWaitUntil:
+    visible:
+      id: "results-container"
+    timeout: 10000
+- assertVisible:
+    id: "result-item-american-robin"
+- assertVisible:
+    id: "results-count"
+    text: "1 species found"
+# Make sure we don't see other birds
+- assertNotVisible:
+    id: "result-item-blue-jay"
+- assertNotVisible:
+    id: "result-item-northern-cardinal"

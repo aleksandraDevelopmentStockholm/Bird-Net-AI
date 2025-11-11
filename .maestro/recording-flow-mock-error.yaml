@@ -1,0 +1,38 @@
+appId: com.amalesa.aiApp
+---
+# Test for error scenario - verifies error handling and user feedback
+# Prerequisites: Start mock server with: cd test-server && pnpm start
+- launchApp
+- openLink: "aiapp://?mockMode=true&mockScenario=error"
+- assertVisible: "BirdNet"
+
+# Start recording
+- extendedWaitUntil:
+    visible:
+      id: "recording-start-button"
+      enabled: true
+    timeout: 100000
+- tapOn:
+    id: "recording-start-button"
+- extendedWaitUntil:
+    visible:
+      id: "recording-stop-button"
+    timeout: 10000
+
+# Stop recording
+- tapOn:
+    id: "recording-stop-button"
+
+# Analyze with mock data (will throw error)
+- assertVisible:
+    id: "analyze-button"
+- tapOn:
+    id: "analyze-button"
+
+# Verify error message appears
+- extendedWaitUntil:
+    visible:
+      id: "analysis-error"
+    timeout: 10000
+- assertVisible:
+    id: "analysis-error-message"

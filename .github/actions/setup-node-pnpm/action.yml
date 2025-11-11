@@ -1,0 +1,58 @@
+name: 'Setup Node & pnpm'
+description: 'Configure Node.js, pnpm with caching, and install dependencies'
+
+inputs:
+  node-version:
+    description: 'Node.js version to install'
+    required: false
+    default: '18'
+  pnpm-version:
+    description: 'pnpm version to install'
+    required: false
+    default: '9'
+  install-dependencies:
+    description: 'Whether to install dependencies'
+    required: false
+    default: 'true'
+  enable-cache:
+    description: 'Whether to enable pnpm cache'
+    required: false
+    default: 'true'
+  working-directory:
+    description: 'Working directory for dependency installation'
+    required: false
+    default: '.'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: ${{ inputs.pnpm-version }}
+
+    - name: Get pnpm store directory
+      if: inputs.enable-cache == 'true'
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+    - name: Setup pnpm cache
+      if: inputs.enable-cache == 'true'
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+
+    - name: Install dependencies
+      if: inputs.install-dependencies == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: pnpm install --frozen-lockfile

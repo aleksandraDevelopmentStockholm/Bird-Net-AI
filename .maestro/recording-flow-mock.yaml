@@ -1,0 +1,46 @@
+appId: com.amalesa.aiApp
+---
+# Local development test - uses mock data for fast testing
+# Prerequisites: Start mock server with: cd test-server && pnpm start
+- launchApp
+- openLink: "aiapp://?mockMode=true&mockScenario=success"
+- assertVisible: "BirdNet"
+
+# Start recording
+- extendedWaitUntil:
+    visible:
+      id: "recording-start-button"
+      enabled: true
+    timeout: 100000
+- tapOn:
+    id: "recording-start-button"
+- extendedWaitUntil:
+    visible:
+      id: "recording-stop-button"
+    timeout: 10000
+
+# Stop recording
+- tapOn:
+    id: "recording-stop-button"
+
+# Analyze with mock data
+- assertVisible:
+    id: "analyze-button"
+- tapOn:
+    id: "analyze-button"
+
+# Wait for analysis to complete and verify mock results appear
+- extendedWaitUntil:
+    visible:
+      id: "results-container"
+    timeout: 10000
+
+# Verify results count shows 3 species
+- assertVisible:
+    text: "3 species found"
+
+# Verify at least first two results are visible
+- assertVisible:
+    id: "result-item-american-robin"
+- assertVisible:
+    id: "result-item-blue-jay"

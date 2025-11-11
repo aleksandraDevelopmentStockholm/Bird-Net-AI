@@ -1,0 +1,11 @@
+appId: com.amalesa.aiApp
+---
+- launchApp
+- assertVisible:
+    id: "home-scroll-view"
+- assertVisible:
+    id: "header-title"
+- assertVisible:
+    id: "recording-start-button"
+    enabled: true
+    

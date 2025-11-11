@@ -1,0 +1,43 @@
+appId: com.amalesa.aiApp
+---
+# Test for API forbidden error (403) - verifies user-friendly error message
+# Prerequisites: Start mock server with: cd test-server && pnpm start
+- launchApp
+- openLink: "aiapp://?mockMode=true&mockScenario=forbidden_error"
+- assertVisible: "BirdNet"
+
+# Start recording
+- extendedWaitUntil:
+    visible:
+      id: "recording-start-button"
+      enabled: true
+    timeout: 100000
+- tapOn:
+    id: "recording-start-button"
+- extendedWaitUntil:
+    visible:
+      id: "recording-stop-button"
+    timeout: 10000
+
+# Stop recording
+- tapOn:
+    id: "recording-stop-button"
+
+# Analyze with mock data (will throw 403 forbidden error)
+- assertVisible:
+    id: "analyze-button"
+- tapOn:
+    id: "analyze-button"
+
+# Verify error message appears with user-friendly text
+- extendedWaitUntil:
+    visible:
+      id: "analysis-error"
+    timeout: 10000
+- assertVisible:
+    id: "analysis-error-message"
+
+# Verify user can retry by clicking Find Birds again
+- assertVisible:
+    id: "analyze-button"
+    enabled: true

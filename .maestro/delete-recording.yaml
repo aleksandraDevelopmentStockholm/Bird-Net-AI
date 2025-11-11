@@ -1,0 +1,133 @@
+appId: com.amalesa.aiApp
+---
+# Delete Recording Flow Test
+# Tests: Record → Save → Navigate to Recordings → Delete → Verify deletion
+# Prerequisites: Start mock server with: cd test-server && pnpm start
+
+- launchApp
+
+# Clear any existing recordings and configure mock mode
+- openLink: "aiapp://?mockMode=true&mockScenario=success&clearRecordings=true"
+
+# Wait for clearing to complete and app to be ready
+- extendedWaitUntil:
+    visible:
+      id: "home-tab"
+    timeout: 5000
+
+# ============================================
+# Flow 1: Create a Recording to Delete
+# ============================================
+
+# Start recording on Home tab
+- assertVisible:
+    id: "recording-start-button"
+- tapOn:
+    id: "recording-start-button"
+
+# Wait for recording to start
+- assertVisible:
+    id: "recording-stop-button"
+- assertVisible:
+    id: "recording-duration-container"
+
+# Wait a bit to record some audio
+- waitForAnimationToEnd
+
+# Stop recording
+- tapOn:
+    id: "recording-stop-button"
+
+# Analyze to save the recording
+- assertVisible:
+    id: "analyze-button"
+- tapOn:
+    id: "analyze-button"
+
+# Wait for results
+- extendedWaitUntil:
+    visible:
+      id: "results-container"
+    timeout: 10000
+
+# ============================================
+# Flow 2: Navigate to Recordings Tab
+# ============================================
+
+# Navigate to Recordings tab to verify it was saved
+- tapOn:
+    id: "recordings-tab"
+
+# Wait for recordings to load
+- extendedWaitUntil:
+    visible:
+      id: "recordings-scroll-view"
+    timeout: 5000
+
+# Verify we're NOT seeing the empty state
+- assertNotVisible:
+    id: "empty-recordings"
+
+# Verify audio player is present (indicating recording exists)
+- assertVisible:
+    id: "audio-player-container"
+
+# ============================================
+# Flow 3: Delete the Recording
+# ============================================
+
+# Verify delete button is visible
+- assertVisible:
+    id: "delete-recording-button"
+
+# Tap delete button
+- tapOn:
+    id: "delete-recording-button"
+
+# ============================================
+# Flow 4: Verify Deletion
+# ============================================
+
+# Wait for deletion to complete and UI to update
+- extendedWaitUntil:
+    visible:
+      id: "empty-recordings"
+    timeout: 5000
+
+# Verify empty state message appears
+- assertVisible:
+    id: "empty-recordings"
+
+# Verify audio player is gone
+- assertNotVisible:
+    id: "audio-player-container"
+
+# Verify delete button is gone
+- assertNotVisible:
+    id: "delete-recording-button"
+
+# ============================================
+# Flow 5: Verify Fresh Recording Still Works
+# ============================================
+
+# Go back to Home tab
+- tapOn:
+    id: "home-tab"
+
+# Start a new recording to ensure functionality persists
+- assertVisible:
+    id: "recording-start-button"
+- tapOn:
+    id: "recording-start-button"
+
+# Verify recording starts
+- assertVisible:
+    id: "recording-stop-button"
+
+# Stop recording
+- tapOn:
+    id: "recording-stop-button"
+
+# Verify we can interact with the new recording
+- assertVisible:
+    id: "analyze-button"

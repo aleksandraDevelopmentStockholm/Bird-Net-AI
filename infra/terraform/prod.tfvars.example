@@ -1,0 +1,13 @@
+# Production Environment Configuration
+environment = "prod"
+
+# Use existing VPC for production
+create_vpc = false
+
+# Existing Production Infrastructure
+# TODO: Update these with your actual production VPC and subnet IDs
+existing_vpc_id     = "vpc-REPLACE_WITH_PROD_VPC_ID"
+existing_subnet_ids = ["subnet-REPLACE_1", "subnet-REPLACE_2"]
+
+# Application Configuration
+allowed_origin = "https://birdnet.app" # Replace with your actual production domain

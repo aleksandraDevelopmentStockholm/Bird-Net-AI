@@ -1,0 +1,20 @@
+name: 'Setup Expo & EAS'
+description: 'Configure Expo and EAS CLI with authentication'
+
+inputs:
+  expo-token:
+    description: 'Expo authentication token'
+    required: true
+  eas-version:
+    description: 'EAS CLI version to install'
+    required: false
+    default: 'latest'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Expo and EAS
+      uses: expo/expo-github-action@v8
+      with:
+        eas-version: ${{ inputs.eas-version }}
+        token: ${{ inputs.expo-token }}

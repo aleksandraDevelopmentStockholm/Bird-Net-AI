@@ -1,0 +1,74 @@
+Acrocephalus scirpaceus_Eurasian Reed Warbler
+Alophoixus flaveolus_White-throated Bulbul
+Asthenes coryi_Ochre-browed Thistletail
+Bradypterus brunneus_Brown Emutail
+Bucephala clangula_Common Goldeneye
+Burhinus senegalensis_Senegal Thick-knee
+Buteo regalis_Ferruginous Hawk
+Cinclosoma ajax_Painted Quail-thrush
+Corvus hawaiiensis_Hawaiian Crow
+Cranioleuca demissa_Tepui Spinetail
+Elaenia olivina_Tepui Elaenia
+Environmental_Environmental
+Euchrepomis spodioptila_Ash-winged Antwren
+Eunemobius confusus_Confused Ground Cricket
+Formicarius rufifrons_Rufous-fronted Antthrush
+Geokichla guttata_Spotted Ground-Thrush
+Glaucidium parkeri_Subtropical Pygmy-Owl
+Grallaria cajamarcae_Cajamarca Antpitta
+Grallaria griseonucha_Gray-naped Antpitta
+Hemitriccus rufigularis_Buff-throated Tody-Tyrant
+Human non-vocal_Human non-vocal
+Human vocal_Human vocal
+Human whistle_Human whistle
+Hyliola regilla_Pacific Chorus Frog
+Lepidothrix suavissima_Orange-bellied Manakin
+Lophochroa leadbeateri_Pink Cockatoo
+Mareca americana_American Wigeon
+Menura novaehollandiae_Superb Lyrebird
+Microcerculus ustulatus_Flutist Wren
+Myrmoborus myotherinus_Black-faced Antbird
+Myrmothera simplex_Tepui Antpitta
+Myrmothera subcanescens_Tapajos Antpitta
+Myrmotherula ambigua_Yellow-throated Antwren
+Nannopsittaca panychlora_Tepui Parrotlet
+Nicator gularis_Eastern Nicator
+Ninox japonica_Northern Boobook
+Noise_Noise
+Odontophorus columbianus_Venezuelan Wood-Quail
+Onychognathus tristramii_Tristram's Starling
+Otidiphaps nobilis_Pheasant Pigeon
+Pachycephala lanioides_White-breasted Whistler
+Parabuteo unicinctus_Harris's Hawk
+Phyllastrephus fischeri_Fischer's Greenbul
+Phylloscopus kansuensis_Gansu Leaf Warbler
+Pipreola whitelyi_Red-banded Fruiteater
+Polioptila caerulea_Blue-gray Gnatcatcher
+Polyplectron malacense_Malayan Peacock-Pheasant
+Pomatorhinus ruficollis_Streak-breasted Scimitar-Babbler
+Power tools_Power tools
+Psilopogon eximius_Bornean Barbet
+Pterocles alchata_Pin-tailed Sandgrouse
+Pterodroma externa_Juan Fernandez Petrel
+Ptilorrhoa leucosticta_Spotted Jewel-babbler
+Pycnonotus taivanus_Styan's Bulbul
+Pygiptila stellaris_Spot-winged Antshrike
+Pyriglena leucoptera_White-shouldered Fire-eye
+Ramphocaenus sticturus_Chattering Gnatwren
+Scytalopus canus_Paramillo Tapaculo
+Scytalopus femoralis_Rufous-vented Tapaculo
+Scytalopus intermedius_Utcubamba Tapaculo
+Scytalopus macropus_Large-footed Tapaculo
+Scytalopus meridanus_Merida Tapaculo
+Scytalopus micropterus_Long-tailed Tapaculo
+Scytalopus parvirostris_Trilling Tapaculo
+Scytalopus unicolor_Unicolored Tapaculo
+Spilornis cheela_Crested Serpent-Eagle
+Syndactyla guttulata_Guttulate Foliage-gleaner
+Syndactyla striata_Bolivian Recurvebill
+Tachyphonus rufus_White-lined Tanager
+Thamnomanes saturninus_Saturnine Antshrike
+Thamnophilus ruficapillus_Rufous-capped Antshrike
+Thripadectes scrutator_Rufous-backed Treehunter
+Turdus dissimilis_Black-breasted Thrush
+Vireo sclateri_Tepui Vireo

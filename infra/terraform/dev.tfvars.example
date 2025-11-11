@@ -1,0 +1,12 @@
+# Development Environment Configuration
+environment = "dev"
+
+# Create new VPC for development
+create_vpc = true
+
+# VPC Configuration
+vpc_cidr           = "10.1.0.0/16"
+availability_zones = ["eu-north-1a", "eu-north-1b"]
+
+# Application Configuration
+allowed_origin = "*" # For development; restrict in production
