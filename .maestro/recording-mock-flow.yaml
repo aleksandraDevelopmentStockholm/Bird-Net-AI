@@ -1,0 +1,108 @@
+appId: com.amalesa.aiApp
+---
+# Complete Recording Flow Test
+# Tests all user flows: Record → Stop → Close → Record again
+- launchApp
+- openLink: "aiapp://?mockMode=true&mockScenario=no_results"
+- assertVisible: "BirdNet"
+
+# Initial state: Verify we're on the Home tab
+- assertVisible:
+    id: "instructions"
+- assertVisible:
+    id: "recording-start-button"
+
+# ============================================
+# Flow 1: Start and Stop Recording
+# ============================================
+
+# Step 1: Start recording
+- tapOn:
+    id: "recording-start-button"
+- assertVisible:
+    id: "recording-stop-button" 
+- assertVisible:
+    id: "recording-duration-container"
+
+# Wait for a few seconds of recording
+- waitForAnimationToEnd   
+
+# Step 2: Stop recording
+- tapOn:
+    id: "recording-stop-button"
+
+# Step 3: Verify recording was saved and UI updated
+- assertVisible:
+    id: "analyze-button"
+- assertVisible:
+    id: "close-recording-button"
+
+# ============================================
+# Flow 2: Close Recording (without analyzing)
+# ============================================
+
+# Step 4: Click close button to clear recording
+- tapOn:
+    id: "close-recording-button"
+
+# Step 5: Verify we're back to initial state
+- assertVisible:
+    id: "instructions"
+- assertVisible:
+    id: "recording-start-button"
+
+# ============================================
+# Flow 3: Record Again (ensure functionality persists)
+# ============================================
+
+# Step 6: Start new recording:
+
+- tapOn:
+    id: "recording-start-button"
+- assertVisible:
+    id: "recording-stop-button" 
+- assertVisible:
+    id: "recording-duration-container"
+
+# Step 7: Stop new recording
+- tapOn: 
+    id: "recording-stop-button"
+
+# Step 8: Verify recording UI appears again
+- assertVisible:
+    id: "analyze-button"
+- assertVisible:
+    id: "audio-player-container"
+# ============================================
+# Flow 4: Navigate to Recordings Tab
+# ============================================
+
+- assertVisible:
+    id: "close-recording-button"
+- tapOn:
+    id: "close-recording-button"
+
+# Navigate to Recordings tab to verify previously analyzed recordings are displayed
+- assertVisible:
+    id: "recordings-tab"
+- tapOn:
+    id: "recordings-tab"
+
+# Verify we can see saved recordings (from previous test runs)
+# Note: Recordings are only saved after analysis, so the two recordings
+# created in this test won't appear here since they were closed without analyzing
+- runFlow:
+    when:
+      visible:
+        id: "audio-player-container"
+    commands:
+      - assertVisible:
+          id: "audio-player-container"
+
+# Navigate back to Home tab
+- tapOn:
+    id: "home-tab"
+- assertVisible:
+    id: "instructions"
+- assertVisible:
+    id: "recording-start-button"

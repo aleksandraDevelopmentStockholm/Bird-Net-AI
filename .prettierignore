@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+.expo
+.next
+
+# Generated files
+*.log
+*.tsbuildinfo
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# OS files
+.DS_Store
+
+# IDE
+.vscode
+.idea
+
+# Coverage
+coverage
+
+# Maestro
+.maestro/**/*.yaml

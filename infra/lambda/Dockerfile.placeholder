@@ -1,0 +1,15 @@
+# Minimal placeholder Lambda image for initial Terraform deployment
+# This image will be replaced by the actual application images during deployment
+FROM amazon/aws-lambda-nodejs:20
+
+# Create a minimal handler that returns success
+RUN echo 'exports.handler = async (event) => { \
+  console.log("Placeholder handler - this will be replaced by actual deployment"); \
+  return { \
+    statusCode: 200, \
+    body: JSON.stringify({ message: "Placeholder Lambda function" }) \
+  }; \
+};' > ${LAMBDA_TASK_ROOT}/index.js
+
+# Set the CMD to the placeholder handler
+CMD [ "index.handler" ]

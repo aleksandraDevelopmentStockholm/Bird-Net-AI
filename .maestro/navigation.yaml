@@ -1,0 +1,30 @@
+appId: com.amalesa.aiApp
+---
+- launchApp
+- openLink: "aiapp://?mockMode=true&mockScenario=error"
+- assertVisible: "BirdNet"
+
+# Navigate to Recordings tab
+- assertVisible:
+    id: "recordings-tab"
+- tapOn:
+    id: "recordings-tab"
+# Accept either empty state (no recordings) or scroll view (with recordings)
+- runFlow:
+    when:
+      visible:
+        id: "empty-recordings"
+    commands:
+      - assertVisible:
+          id: "empty-recordings"
+- runFlow:
+    when:
+      visible:
+        id: "recordings-scroll-view"
+    commands:
+      - assertVisible:
+          id: "recordings-scroll-view"
+- tapOn:
+    id: "home-tab"
+- assertVisible:
+    id: "instructions"

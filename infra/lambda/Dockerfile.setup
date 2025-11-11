@@ -1,0 +1,20 @@
+# Use AWS Lambda Node.js base image from Docker Hub
+FROM amazon/aws-lambda-nodejs:20
+
+# Create package.json for setup Lambda
+RUN echo '{ \
+  "name": "birdnet-setup-lambda", \
+  "version": "1.0.0", \
+  "dependencies": { \
+    "@aws-sdk/client-s3": "^3.680.0" \
+  } \
+}' > ${LAMBDA_TASK_ROOT}/package.json
+
+# Install dependencies
+RUN cd ${LAMBDA_TASK_ROOT} && npm install --production --no-optional
+
+# Copy setup Lambda function code
+COPY setup-efs.js ${LAMBDA_TASK_ROOT}/
+
+# Set the CMD to setup handler
+CMD [ "setup-efs.handler" ]

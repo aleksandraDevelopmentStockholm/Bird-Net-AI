@@ -1,0 +1,212 @@
+name: E2E Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to test'
+        required: true
+        default: 'android'
+        type: choice
+        options:
+          - android
+          - ios
+      build_mode:
+        description: 'Build mode'
+        required: true
+        default: 'existing'
+        type: choice
+        options:
+          - existing
+          - new
+      fingerprint:
+        description: 'Build fingerprint (required for existing mode)'
+        required: true
+        type: string
+
+jobs:
+  e2e-test:
+    name: E2E Test (${{ inputs.platform }})
+    runs-on: ${{ inputs.platform == 'ios' && 'macos-latest' || 'ubuntu-latest' }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node & pnpm
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Setup Expo & EAS
+        uses: ./.github/actions/setup-expo-eas
+        with:
+          expo-token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build app (if requested)
+        if: github.event.inputs.build_mode == 'new' || github.event_name == 'pull_request'
+        run: |
+          echo "🔨 Building new ${{ inputs.platform }} app..."
+          eas build --profile e2e-test --platform ${{ inputs.platform }} --non-interactive --wait
+
+      - name: Download build artifact
+        run: |
+          echo "📥 Downloading build with fingerprint: ${{ github.event.inputs.fingerprint }}"
+          eas build:download --platform ${{ inputs.platform }} --fingerprint ${{ github.event.inputs.fingerprint }}
+
+          if [ "${{ inputs.platform }}" = "android" ]; then
+            # Find APK in /tmp directory where EAS downloads
+            APK_FILE=$(find /tmp -name "*.apk" -type f 2>/dev/null | head -n 1)
+
+            if [ -z "$APK_FILE" ]; then
+              echo "❌ No APK file found after download"
+              exit 1
+            fi
+
+            # Copy to known location
+            cp "$APK_FILE" ./app.apk
+            ls -lh app.apk
+            echo "✅ APK downloaded successfully: $APK_FILE"
+          else
+            # Find .app file for iOS
+            APP_FILE=$(find . -name "*.app" -type d | head -n 1)
+
+            if [ -z "$APP_FILE" ]; then
+              echo "❌ No .app file found after download"
+              exit 1
+            fi
+
+            echo "📱 Found app: $APP_FILE"
+            echo "✅ App downloaded successfully"
+          fi
+
+      - name: Install mock server dependencies
+        run: |
+          echo "📦 Installing mock server dependencies..."
+          cd test-server
+          pnpm install --frozen-lockfile
+
+      - name: Start mock API server
+        run: |
+          echo "🚀 Starting mock BirdNET API server..."
+          pnpm test-server &
+          echo $! > server.pid
+          sleep 3
+
+      - name: Wait for server to be ready
+        run: |
+          echo "⏳ Waiting for mock server to be ready..."
+          timeout 30 bash -c 'until curl -s http://localhost:3001/health | grep -q "ok"; do sleep 1; done'
+          echo "✅ Mock server is ready!"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # Android-specific setup
+      - name: Setup Android SDK
+        if: inputs.platform == 'android'
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Android Emulator
+        if: inputs.platform == 'android'
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: android-emulator-${{ runner.os }}-api34-pixel6
+          restore-keys: |
+            android-emulator-${{ runner.os }}-api34-
+            android-emulator-${{ runner.os }}-
+
+      - name: Enable KVM for Android Emulator
+        if: inputs.platform == 'android'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run E2E tests (Android)
+        if: inputs.platform == 'android'
+        uses: reactivecircus/android-emulator-runner@v2.32.0
+        env:
+          EXPO_PUBLIC_BIRDNET_API_URL: http://localhost:3001
+          EXPO_PUBLIC_BIRDNET_API_KEY: mock-key
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          heap-size: 2048M
+          disk-size: 6000M
+          disable-animations: true
+          script: |
+            curl -fsSL "https://get.maestro.mobile.dev" | bash
+            export PATH="$PATH":"$HOME/.maestro/bin"
+            maestro --version
+            echo "📱 Installing APK: app.apk"
+            adb install app.apk
+            echo "✅ App installed on emulator"
+            adb shell settings put global window_animation_scale 0
+            adb shell settings put global transition_animation_scale 0
+            adb shell settings put global animator_duration_scale 0
+            pnpm test:e2e:ci
+
+      # iOS-specific setup
+      - name: Set up iOS Simulator
+        if: inputs.platform == 'ios'
+        run: |
+          # List available simulators
+          xcrun simctl list devices available
+
+          # Boot iPhone 15 Pro simulator
+          UDID=$(xcrun simctl list devices available | grep "iPhone 15 Pro" | grep -v "Max" | head -n 1 | grep -o '[0-9A-F]\{8\}-[0-9A-F]\{4\}-[0-9A-F]\{4\}-[0-9A-F]\{4\}-[0-9A-F]\{12\}')
+          echo "📱 Booting simulator: $UDID"
+          xcrun simctl boot "$UDID" || echo "Simulator already booted"
+
+          # Wait for simulator to boot
+          echo "⏳ Waiting for simulator to boot..."
+          sleep 10
+
+      - name: Install app on iOS simulator
+        if: inputs.platform == 'ios'
+        run: |
+          # Find the downloaded .app file
+          APP_FILE=$(find . -name "*.app" -type d | head -n 1)
+          echo "📱 Found app: $APP_FILE"
+
+          # Install the app
+          xcrun simctl install booted "$APP_FILE"
+          echo "✅ App installed on simulator"
+
+      - name: Run E2E tests (iOS)
+        if: inputs.platform == 'ios'
+        env:
+          EXPO_PUBLIC_BIRDNET_API_URL: http://localhost:3001
+          EXPO_PUBLIC_BIRDNET_API_KEY: mock-key
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          export PATH="$PATH":"$HOME/.maestro/bin"
+          maestro --version
+          pnpm test:e2e:ci
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: maestro-results-${{ inputs.platform }}
+          path: |
+            ~/.maestro/tests/**/*
+            maestro-report.xml
+          retention-days: 7
+
+      - name: Stop mock server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            echo "🛑 Stopping mock server..."
+            kill $(cat server.pid) || true
+            rm server.pid
+          fi

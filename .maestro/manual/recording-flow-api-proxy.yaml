@@ -1,0 +1,42 @@
+appId: com.amalesa.aiApp
+---
+# API Integration Test - uses mock server as proxy to test real AWS API
+# Prerequisites:
+#   1. Ensure .env file has EXPO_PUBLIC_BIRDNET_API_URL and EXPO_PUBLIC_BIRDNET_API_KEY set
+#   2. Start mock server with: cd test-server && pnpm start
+#   3. Mock server will automatically load .env and proxy requests to the real AWS API
+- launchApp
+- openLink: "aiapp://?mockMode=true&mockScenario=proxy"
+- assertVisible: "BirdNet"
+
+# Start recording
+- extendedWaitUntil:
+    visible:
+      id: "recording-start-button"
+      enabled: true
+    timeout: 10000
+- tapOn:
+    id: "recording-start-button"
+- extendedWaitUntil:
+    visible:
+      id: "recording-stop-button"
+    timeout: 10000
+
+# Stop recording
+- tapOn:
+    id: "recording-stop-button"
+
+# Analyze with real API (via proxy)
+- assertVisible:
+    id: "analyze-button"
+- tapOn:
+    id: "analyze-button"
+
+# Wait for real API response (may take longer than mock)
+- extendedWaitUntil:
+    visible:
+      id: "results-container"
+    timeout: 60000
+
+# Verify results appeared (actual species will depend on audio recorded)
+# Note: This test requires actual bird sounds to be played during recording

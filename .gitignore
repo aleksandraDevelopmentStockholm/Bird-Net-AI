@@ -1,0 +1,91 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.easrc
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+.env*
+!.env.example
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+app-example
+
+# generated native folders
+/ios
+/android
+
+# BirdNET model files (keep directory structure, ignore large files)
+assets/models/birdnet_audio_model/*.bin
+assets/models/birdnet_audio_model/model.json
+assets/models/birdnet_audio_model/*.pb
+assets/models/labels/*.txt
+
+# Python virtual environment for model conversion
+birdnet_env/
+__pycache__/
+*.pyc
+*.pyo
+
+# Temporary model conversion files
+birdnet_saved_model/
+*.tflite
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+*.auto.tfvars
+terraform.tfstate.d/
+
+# Infrastructure archives
+infra.zip
+
+.claude
+.vscode
+
+
+
+# Temporary/debug files
+response.json
+*.zip
+
+# Maestro E2E test output
+.maestro/output/
+maestro-report/
+
+.secrets
