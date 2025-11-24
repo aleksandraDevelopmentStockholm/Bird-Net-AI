@@ -1,0 +1,168 @@
+name: E2E Test (iOS - Native)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build & Test iOS (Native)
+    runs-on: macos-14
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node & pnpm
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Setup iOS Build Environment
+        run: |
+          echo "🍎 Setting up iOS build environment..."
+
+          # Install CocoaPods
+          sudo gem install cocoapods
+
+          # Create .env file
+          cat > .env << EOF
+          APP_NAME=BirdNet
+          APP_SLUG=aiapp
+          ANDROID_PACKAGE=com.amalesa.aiApp
+          IOS_BUNDLE_ID=com.amalesa.aiApp
+          EXPO_PUBLIC_BIRDNET_API_URL=http://localhost:3001
+          EXPO_PUBLIC_BIRDNET_API_KEY=mock-api-key
+          EOF
+
+      - name: Build iOS App
+        run: |
+          echo "📱 Building iOS app for simulator..."
+
+          # Generate native iOS project
+          pnpm expo prebuild --platform ios --clean
+
+          # Install pods
+          cd ios
+          pod install
+
+          # Build for simulator
+          xcodebuild \
+            -workspace *.xcworkspace \
+            -scheme aiapp \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -derivedDataPath ./build \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro' \
+            build
+
+          # Find and copy the .app bundle
+          APP_PATH=$(find ./build -name "*.app" -type d | head -n 1)
+          mkdir -p ../output
+          cp -r "$APP_PATH" ../output/app.app
+
+          echo "✅ iOS app built successfully"
+          ls -lh ../output/
+
+      - name: Upload iOS app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-app
+          path: output/app.app
+          retention-days: 7
+
+      - name: Install mock server dependencies
+        run: |
+          echo "📦 Installing mock server dependencies..."
+          cd test-server
+          pnpm install --frozen-lockfile
+
+      - name: Start mock API server
+        run: |
+          echo "🚀 Starting mock BirdNET API server..."
+          pnpm test-server &
+          echo $! > server.pid
+          sleep 3
+
+      - name: Wait for server to be ready
+        run: |
+          echo "⏳ Waiting for mock server..."
+          timeout 30 bash -c 'until curl -s http://localhost:3001/health | grep -q "ok"; do sleep 1; done'
+          echo "✅ Mock server ready"
+
+      - name: Set up iOS Simulator
+        run: |
+          echo "📱 Setting up iOS Simulator..."
+
+          # List available simulators
+          xcrun simctl list devices available
+
+          # Find and boot iPhone 15 Pro simulator
+          UDID=$(xcrun simctl list devices available | grep "iPhone 15 Pro" | grep -v "Max" | head -n 1 | grep -o '[0-9A-F]\{8\}-[0-9A-F]\{4\}-[0-9A-F]\{4\}-[0-9A-F]\{4\}-[0-9A-F]\{12\}')
+
+          if [ -z "$UDID" ]; then
+            echo "❌ iPhone 15 Pro simulator not found"
+            echo "Available simulators:"
+            xcrun simctl list devices available
+            exit 1
+          fi
+
+          echo "🔄 Booting simulator: $UDID"
+          xcrun simctl boot "$UDID" || echo "Simulator already booted"
+
+          # Wait for simulator to boot
+          echo "⏳ Waiting for simulator to boot..."
+          sleep 10
+
+          # Verify simulator is booted
+          xcrun simctl list devices | grep Booted
+
+      - name: Install app on iOS simulator
+        run: |
+          echo "📲 Installing app on simulator..."
+          xcrun simctl install booted output/app.app
+          echo "✅ App installed on simulator"
+
+      - name: Run E2E tests
+        env:
+          EXPO_PUBLIC_BIRDNET_API_URL: http://localhost:3001
+          EXPO_PUBLIC_BIRDNET_API_KEY: mock-api-key
+        run: |
+          echo "📥 Installing Maestro..."
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          export PATH="$PATH":"$HOME/.maestro/bin"
+          maestro --version
+
+          echo "🧪 Running E2E tests..."
+          pnpm test:e2e:ci
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: maestro-results-ios
+          path: |
+            ~/.maestro/tests/**/*
+            maestro-report.xml
+          retention-days: 7
+
+      - name: Stop mock server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            echo "🛑 Stopping mock server..."
+            kill $(cat server.pid) || true
+            rm server.pid
+          fi
+
+      - name: Post test summary
+        if: always()
+        run: |
+          echo "## 🧪 E2E Test Results (iOS - Native)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Platform:** iOS" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Method:** Native macOS build (no EAS)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f maestro-report.xml ]; then
+            echo "**Status:** ✅ Tests completed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Status:** ❌ Tests failed or did not complete" >> $GITHUB_STEP_SUMMARY
+          fi

@@ -89,3 +89,4 @@ response.json
 maestro-report/
 
 .secrets
+.actrc

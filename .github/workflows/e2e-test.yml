@@ -110,7 +110,7 @@ jobs:
 
       - name: Cache Android Emulator
         if: inputs.platform == 'android'
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.android/avd/*
@@ -194,7 +194,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: maestro-results-${{ inputs.platform }}
           path: |

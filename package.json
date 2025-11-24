@@ -44,8 +44,9 @@
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
+    "babel-preset-expo": "^54.0.7",
     "dotenv": "^17.2.3",
-    "expo": "~54.0.21",
+    "expo": "~54.0.25",
     "expo-asset": "~12.0.9",
     "expo-audio": "^1.0.14",
     "expo-constants": "~18.0.10",
@@ -87,7 +88,8 @@
   },
   "pnpm": {
     "overrides": {
-      "tar@7.5.1": ">=7.5.2"
+      "tar@7.5.1": ">=7.5.2",
+      "glob@10.4.5": "10.5.0"
     }
   },
   "private": true

@@ -1,404 +1,488 @@
-# BirdNet CI/CD Workflows
+# BirdNet CI/CD & Testing Guide
 
-GitHub Actions workflows for automating BirdNet mobile app builds and end-to-end testing.
+Complete guide for building, testing, and running GitHub Actions workflows for the BirdNet mobile app.
 
-## Prerequisites
+## Table of Contents
 
-To use these workflows, ensure you have:
+- [Quick Start](#quick-start)
+- [Available Workflows](#available-workflows)
+- [Testing Methods](#testing-methods)
+- [Local Development](#local-development)
+- [GitHub Actions Setup](#github-actions-setup)
+- [Running Workflows Locally with Act](#running-workflows-locally-with-act)
+- [Troubleshooting](#troubleshooting)
 
-- **GitHub Account** with repository access
-- **Expo Account** - Sign up at [expo.dev](https://expo.dev)
-- **EAS CLI** installed locally - `npm install -g eas-cli`
-- **GitHub Secrets configured** - See [Setup](#initial-setup)
+---
 
-**For E2E testing:**
+## Quick Start
 
-- **Maestro Cloud** access (or local Maestro setup)
-- **Mock API server** configured in `test-server/`
+### For Daily Development
+```bash
+pnpm test-server &    # Start mock API
+pnpm android:dev      # Run app
+pnpm test:e2e         # Run E2E tests
+```
+
+### For CI/CD (No EAS Quota)
+```bash
+# Android
+gh workflow run e2e-android-docker.yml
+
+# iOS
+gh workflow run e2e-ios-native.yml
+```
+
+### For Production Releases
+```bash
+gh workflow run e2e-test.yml -f platform=all -f build_mode=new
+```
+
+---
 
 ## Available Workflows
 
-### 1. **App Build** (`app-build.yml`)
+### 1. App Build (`app-build.yml`) - EAS Builds
 
-Builds mobile app for iOS and/or Android using Expo Application Services (EAS).
+Builds mobile app for iOS and/or Android using Expo Application Services.
 
 **Triggers:** Manual dispatch only
 
-**What it does:**
-
-- Builds app with specified profile (development/preview/production)
-- Dynamic secret selection based on profile
-- Posts build summary with configuration details
-
 **Parameters:**
-
 - `profile`: development/preview/production
 - `platform`: all/ios/android
 
 **Usage:**
-
 ```bash
-# Preview build for all platforms
-gh workflow run "App Build" -f profile=preview -f platform=all
+# Preview build for Android
+gh workflow run app-build.yml -f profile=preview -f platform=android
 
-# Production iOS build
-gh workflow run "App Build" -f profile=production -f platform=ios
-
-# Development build for testing
-gh workflow run "App Build" -f profile=development -f platform=android
+# Production build for all platforms
+gh workflow run app-build.yml -f profile=production -f platform=all
 ```
 
-**Profile differences:**
-
-- `development`: Uses dev secrets (`BIRDNET_API_URL_DEV`)
-- `preview`: Uses dev secrets, suitable for testing
-- `production`: Uses prod secrets (`BIRDNET_API_URL`)
+**What it does:**
+- Builds app with EAS
+- Selects secrets based on profile (dev vs prod)
+- Posts build summary with download links
 
 ---
 
-### 2. **E2E Test** (`e2e-test.yml`)
+### 2. E2E Test - Android Docker (`e2e-android-docker.yml`) ⭐ RECOMMENDED
 
-Runs end-to-end tests on iOS or Android using Maestro.
+Runs E2E tests with Docker-built Android APK - **no EAS quota consumed!**
 
 **Triggers:** Manual dispatch only
 
-**What it does:**
+**Usage:**
+```bash
+# Run Android E2E tests with Docker build
+gh workflow run e2e-android-docker.yml
+gh run watch
+```
 
-- Downloads or builds app based on `build_mode`
-- Sets up iOS Simulator or Android Emulator
-- Starts mock BirdNET API server
-- Runs Maestro E2E tests
-- Uploads test results
+**What it does:**
+1. Builds Android APK in Docker container
+2. Starts mock API server
+3. Launches Android emulator
+4. Runs Maestro E2E tests
+5. Uploads test results
+
+**Benefits:**
+- ✅ No EAS quota consumption
+- ✅ Free (GitHub Actions minutes only)
+- ✅ Perfect for PR validation
+- ✅ Full control over build
+- ✅ Runs on Linux (ubuntu-latest)
+
+**Limitations:**
+- Android only
+- Not for production builds
+
+---
+
+### 3. E2E Test - iOS Native (`e2e-ios-native.yml`) 🍎 NEW
+
+Runs E2E tests with natively-built iOS app - **no EAS quota consumed!**
+
+**Triggers:** Manual dispatch only
+
+**Usage:**
+```bash
+# Run iOS E2E tests with native build
+gh workflow run e2e-ios-native.yml
+gh run watch
+```
+
+**What it does:**
+1. Builds iOS .app using Xcode on macOS runner
+2. Starts mock API server
+3. Launches iOS Simulator
+4. Runs Maestro E2E tests
+5. Uploads test results
+
+**Benefits:**
+- ✅ No EAS quota consumption
+- ✅ Free (GitHub Actions minutes only)
+- ✅ Perfect for PR validation
+- ✅ Full control over build
+
+**Limitations:**
+- Requires macOS runner (slower than Linux)
+- Not for production builds
+
+---
+
+### 4. E2E Test - EAS Build (`e2e-test.yml`)
+
+Runs E2E tests with EAS-built apps (production-like builds).
+
+**Triggers:** Manual dispatch only
 
 **Parameters:**
-
 - `platform`: ios/android
 - `build_mode`: existing/new
 - `fingerprint`: Build fingerprint (required for existing mode)
 
 **Usage:**
-
 ```bash
-# Test existing Android build
-gh workflow run "E2E Test" \
-  -f platform=android \
-  -f build_mode=existing \
-  -f fingerprint="abc123..."
+# Test with new EAS build
+gh workflow run e2e-test.yml -f platform=android -f build_mode=new
 
-# Build and test iOS
-gh workflow run "E2E Test" \
-  -f platform=ios \
-  -f build_mode=new
+# Test with existing build
+gh workflow run e2e-test.yml \\
+  -f platform=ios \\
+  -f build_mode=existing \\
+  -f fingerprint=abc123
 ```
+
+**When to use:**
+- Final validation before releases
+- Testing iOS (requires EAS)
+- Production-like build testing
 
 ---
 
-## Initial Setup
+## Testing Methods
 
-### Step 1: Add GitHub Secrets
+You have **four ways** to test your app:
 
-1. Go to your repository on GitHub
-2. Navigate to **Settings** → **Secrets and variables** → **Actions**
-3. Click **New repository secret**
-4. Add these secrets:
+### 1. Local Development Testing ⚡ FASTEST
 
-#### Required Secrets
-
-| Secret Name                  | Description               | Where to get it                          |
-| ---------------------------- | ------------------------- | ---------------------------------------- |
-| `EXPO_TOKEN`                 | Expo authentication token | `npx eas login && npx eas whoami --json` |
-| `EXPO_PUBLIC_EAS_PROJECT_ID` | EAS project ID            | From `app.json` or Expo dashboard        |
-
-#### Environment-Specific Secrets
-
-| Secret Name           | Environment | Description       |
-| --------------------- | ----------- | ----------------- |
-| `BIRDNET_API_URL_DEV` | Development | Dev API endpoint  |
-| `BIRDNET_API_KEY_DEV` | Development | Dev API key       |
-| `BIRDNET_API_URL`     | Production  | Prod API endpoint |
-| `BIRDNET_API_KEY`     | Production  | Prod API key      |
-
-**To get Expo Token:**
+**Best for:** Daily development, debugging
 
 ```bash
-npx eas login
-npx eas whoami --json
-# Copy the value from the "authToken" field
+# Terminal 1: Start mock server
+pnpm test-server
+
+# Terminal 2: Run app
+pnpm android:dev  # or pnpm ios:dev
+
+# Terminal 3: Run tests
+pnpm test:e2e
 ```
+
+**Time:** ~30 seconds
+**Cost:** Free
+**Setup:** Requires local emulator/simulator
 
 ---
 
-### Step 2: Test the Setup
+### 2. Docker Build Testing 🐳 RECOMMENDED FOR CI
 
-Run a test build to verify everything works:
+**Best for:** PR validation, testing without EAS
 
+**GitHub Actions:**
 ```bash
-# Quick preview build
-gh workflow run "App Build" -f profile=preview -f platform=all
+# Android
+gh workflow run e2e-android-docker.yml
 
-# Monitor the workflow
-gh run watch
+# iOS
+gh workflow run e2e-ios-native.yml
 ```
+
+**Time:** 15-20 min (first), 5-10 min (cached)
+**Cost:** Free (GitHub Actions minutes)
+
+**Note:** Docker builds work best in GitHub Actions. For local testing, use the local development method above.
 
 ---
 
-## Workflow Examples
+### 3. EAS Build Testing 🏭 PRODUCTION-LIKE
 
-### Building Apps
-
-**Development build (for testing):**
+**Best for:** Final validation, releases, iOS testing
 
 ```bash
-gh workflow run "App Build" -f profile=development -f platform=all
+gh workflow run e2e-test.yml -f platform=all -f build_mode=new
 ```
 
-**Preview build (for stakeholders):**
-
-```bash
-gh workflow run "App Build" -f profile=preview -f platform=ios
-```
-
-**Production build (for app stores):**
-
-```bash
-gh workflow run "App Build" -f profile=production -f platform=all
-```
-
-### Running Tests
-
-**Test latest build:**
-
-```bash
-# Get the latest build fingerprint
-eas build:list --platform=android --limit=1
-
-# Run tests
-gh workflow run "E2E Test" \
-  -f platform=android \
-  -f build_mode=existing \
-  -f fingerprint="<fingerprint-from-above>"
-```
-
-**Build and test in one go:**
-
-```bash
-gh workflow run "E2E Test" \
-  -f platform=ios \
-  -f build_mode=new
-```
+**Time:** 20-25 min
+**Cost:** GitHub Actions minutes + EAS quota
 
 ---
 
-## Monitoring
-
-### View Workflow Status
-
-**Via GitHub CLI:**
-
-```bash
-# List recent runs
-gh run list --workflow="App Build"
-
-# Watch a running workflow
-gh run watch
-
-# View logs
-gh run view <run-id> --log
-```
-
-**Via GitHub UI:**
-
-1. Go to **Actions** tab
-2. Select workflow from left sidebar
-3. Click on a specific run to see details
-
-### Build Results
-
-After a successful build:
-
-- Build URLs are posted in workflow summary
-- Download links expire after 30 days
-- Install on device via Expo Go or direct install
-
 ---
 
-## Troubleshooting
+## Comparison Table
 
-### App Build Workflows
-
-#### Build Failed on EAS
-
-**Check:**
-
-1. `EXPO_TOKEN` secret is valid and not expired
-2. `EXPO_PUBLIC_EAS_PROJECT_ID` matches your project
-3. Build profile exists in `eas.json`
-4. No syntax errors in `app.json` or `app.config.js`
-
-**View detailed build logs:**
-
-```bash
-eas build:list --platform=ios
-eas build:view <build-id>
-```
-
-#### Wrong API URL Used
-
-The workflow automatically selects secrets based on profile:
-
-- `development`/`preview` → `BIRDNET_API_URL_DEV`
-- `production` → `BIRDNET_API_URL`
-
-**Verify in build summary:**
-The workflow posts which environment secrets were used.
-
-### E2E Test Workflows
-
-#### Emulator Won't Boot
-
-**Android:**
-
-```bash
-# List available emulators
-emulator -list-avds
-
-# Check Android SDK installation
-sdkmanager --list
-```
-
-**iOS:**
-
-```bash
-# List available simulators
-xcrun simctl list devices available
-
-# Boot specific simulator
-xcrun simctl boot <device-udid>
-```
-
-#### Mock Server Not Ready
-
-The workflow waits 30 seconds for the mock server to start.
-
-**Check:**
-
-1. `test-server/` dependencies are listed in package.json
-2. Port 3001 is not in use
-3. Server logs for startup errors
-
-#### Tests Fail on Device
-
-**Common causes:**
-
-1. App not installed correctly
-2. Mock server not accessible from emulator
-3. Maestro test files have errors
-
-**Debug locally:**
-
-```bash
-# Install Maestro
-curl -Ls "https://get.maestro.mobile.dev" | bash
-
-# Run tests locally
-cd .maestro
-maestro test recording-flow-mock-success.yaml
-```
-
----
-
-## Security Best Practices
-
-### Secrets Management
-
-✅ **DO:**
-
-- Use GitHub Secrets for all credentials
-- Rotate `EXPO_TOKEN` regularly
-- Use separate API keys for dev/staging/prod
-- Review workflow runs for exposed secrets
-
-❌ **DON'T:**
-
-- Commit credentials to git
-- Share `EXPO_TOKEN` publicly
-- Log sensitive values in workflow output
-- Use production secrets in development builds
-
-### Build Security
-
-✅ **Recommendations:**
-
-- Enable branch protection on `main`
-- Require PR reviews before merging
-- Use signed commits for production builds
-- Audit workflow changes before merging
+| Method | Speed | Cost | Platform | Best For |
+|--------|-------|------|----------|----------|
+| **Local** | ⚡ 30s | Free | iOS/Android | Daily dev |
+| **Docker CI** | 🐌 15min | Free | Android | PRs, CI/CD |
+| **EAS CI** | 🐢 25min | EAS quota | iOS/Android | Releases |
 
 ---
 
 ## Local Development
 
-You can still build and test locally without GitHub Actions:
+### Prerequisites
 
-### Local Builds
+- Node.js 18+
+- pnpm
+- Android Studio (for Android) or Xcode (for iOS)
+- Maestro CLI: `curl -Ls "https://get.maestro.mobile.dev" | bash`
+
+### Running Tests Locally
+
+1. **Start mock API server:**
+   ```bash
+   pnpm test-server
+   ```
+   Server runs on `http://localhost:3001`
+
+2. **Configure environment:**
+   - Android emulator: Update `.env.dev` to use `http://10.0.2.2:3001`
+   - iOS simulator: Use `http://localhost:3001`
+
+3. **Run app:**
+   ```bash
+   pnpm android:dev  # or pnpm ios:dev
+   ```
+
+4. **Run tests:**
+   ```bash
+   pnpm test:e2e
+   ```
+
+---
+
+## GitHub Actions Setup
+
+### Step 1: Configure Repository Secrets
+
+Go to **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+
+#### Required Secrets
+
+| Secret | Description | How to get |
+|--------|-------------|------------|
+| `EXPO_TOKEN` | Expo auth token | `npx eas login && npx eas whoami --json` |
+| `EXPO_PUBLIC_EAS_PROJECT_ID` | EAS project ID | From your project config |
+| `BIRDNET_API_URL_DEV` | Dev API endpoint | Your dev API URL |
+| `BIRDNET_API_KEY_DEV` | Dev API key | Your dev API key |
+| `BIRDNET_API_URL` | Prod API endpoint | Your prod API URL |
+| `BIRDNET_API_KEY` | Prod API key | Your prod API key |
+
+**Get Expo Token:**
+```bash
+npx eas login
+npx eas whoami --json
+# Copy the "authToken" value
+```
+
+### Step 2: Set Default Repository
 
 ```bash
-# Install EAS CLI
-npm install -g eas-cli
-
-# Login
-eas login
-
-# Build locally
-eas build --profile preview --platform all --local
+gh repo set-default your-username/your-repo-name
 ```
+
+### Step 3: Test Workflows
+
+```bash
+# Test E2E (free, no EAS)
+gh workflow run e2e-android-docker.yml  # Android
+gh workflow run e2e-ios-native.yml     # iOS
+
+# Monitor
+gh run watch
+
+# View results
+gh run list --workflow=e2e-docker.yml
+```
+
+---
+
+## Troubleshooting
 
 ### Local Testing
 
+**Problem:** Mock server not accessible
+
+**Solution:**
 ```bash
-# Install Maestro
-curl -Ls "https://get.maestro.mobile.dev" | bash
+# Android emulator uses special IP
+# Update .env.dev:
+EXPO_PUBLIC_BIRDNET_API_URL=http://10.0.2.2:3001
 
-# Start mock server
-cd test-server && pnpm start
+# iOS simulator uses localhost:
+EXPO_PUBLIC_BIRDNET_API_URL=http://localhost:3001
+```
 
-# Run tests (in another terminal)
-cd .maestro
-maestro test recording-flow-mock-success.yaml
+**Problem:** Maestro can't find app
+
+**Solution:**
+```bash
+# Verify app is running
+adb devices  # Android
+xcrun simctl list  # iOS
+
+# Check app is installed
+adb shell pm list packages | grep aiapp
+```
+
+---
+
+### Docker Builds
+
+**Problem:** Build fails or times out
+
+**Solution:**
+```bash
+# Check Docker resources
+# Docker Desktop → Settings → Resources
+# Recommended: 4GB RAM minimum
+
+# Clear cache
+docker system prune -a
+
+# Verify Dockerfile
+./test-docker-build.sh build
+```
+
+**Problem:** APK not created
+
+**Solution:**
+```bash
+# Run build step-by-step
+docker run -it birdnet-app:test bash
+# Inside container:
+pnpm expo prebuild --platform android
+cd android
+./gradlew assembleRelease --stacktrace
+```
+
+---
+
+### GitHub Actions
+
+**Problem:** Workflow not found
+
+**Solution:**
+```bash
+# Make sure workflow is pushed
+git add .github/workflows/e2e-docker.yml
+git commit -m "Add Docker E2E workflow"
+git push
+
+# Verify in GitHub
+gh workflow list
+```
+
+**Problem:** Secrets not configured
+
+**Solution:**
+```bash
+# Set via CLI
+gh secret set EXPO_PUBLIC_EAS_PROJECT_ID -b"your-project-id"
+
+# Or via GitHub UI
+# Settings → Secrets and variables → Actions
+```
+
+**Problem:** Build fails with "No EAS project found"
+
+**Solution:**
+- Verify `EXPO_PUBLIC_EAS_PROJECT_ID` secret is set correctly
+- Check `EXPO_TOKEN` is valid (not expired)
+
+---
+
+## Recommended Workflow Strategy
+
+### During Development
+```bash
+# Fast iteration
+pnpm test-server &
+pnpm android:dev
+pnpm test:e2e
+```
+
+### Before Pull Request
+```bash
+# Push and run on GitHub
+git push origin feature-branch
+gh workflow run e2e-android-docker.yml  # Android
+gh workflow run e2e-ios-native.yml     # iOS
+```
+
+### Before Release
+```bash
+# Use EAS for production-like builds
+gh workflow run e2e-test.yml -f platform=all -f build_mode=new
+```
+
+---
+
+## File Structure
+
+```
+.
+├── .github/
+│   ├── workflows/
+│   │   ├── app-build.yml              # EAS builds
+│   │   ├── e2e-test.yml               # E2E with EAS
+│   │   ├── e2e-android-docker.yml     # E2E Android (Docker, no EAS)
+│   │   ├── e2e-ios-native.yml         # E2E iOS (Native, no EAS)
+│   │   └── README.md                  # This file
+│   └── actions/
+│       └── setup-node-pnpm/        # Composite action
+├── .maestro/                        # E2E test flows
+├── test-server/                     # Mock API server
+└── Dockerfile.android               # Docker build config (NEW!)
 ```
 
 ---
 
 ## Additional Resources
 
-- **Testing Guide:** [`../../docs/TESTING.md`](../../docs/TESTING.md)
-- **App Versioning:** See main README - [App Versioning section](../../README.md#app-versioning)
-- **EAS Build Docs:** https://docs.expo.dev/build/introduction/
-- **Maestro Docs:** https://maestro.mobile.dev/
+### Tools
+- **EAS CLI:** https://docs.expo.dev/build/introduction/
+- **Maestro:** https://maestro.mobile.dev/
+- **GitHub CLI:** https://cli.github.com/
+
+### Documentation
+- **Expo Docs:** https://docs.expo.dev/
+- **React Native:** https://reactnative.dev/
+- **GitHub Actions:** https://docs.github.com/en/actions
 
 ---
 
-## Need Help?
+## Summary
 
-**Common questions:**
+You have **four powerful testing methods**:
 
-1. **"Which build profile should I use?"**
-   - Development: For local testing
-   - Preview: For sharing with testers
-   - Production: For app store submission
+1. **Local testing** (⚡ fastest) - for daily development
+2. **Docker builds** (🐳 free) - for PR validation in CI
+3. **EAS builds** (🏭 production) - for releases
 
-2. **"How do I get build URLs?"**
-   - Check workflow summary in GitHub Actions
-   - Or run: `eas build:list --platform=ios`
+**Best practice:**
+- Use **local** for development (instant feedback)
+- Use **Docker** for PRs (free, fast, runs in CI)
+- Use **EAS** for releases (production-quality)
 
-3. **"Can I trigger builds from pull requests?"**
-   - Not automatically - workflows are manual only
-   - This prevents accidental builds and reduces costs
-
-4. **"How do I test without building?"**
-   - Use `build_mode=existing` in E2E workflow
-   - Much faster (~5 min vs ~15 min)
+Your testing is now faster, cheaper, and more flexible! 🚀
 
 ---
 
-**Last updated:** 2025-10-31
+**Questions?** Check the troubleshooting section above or review the workflow files for implementation details.
+
+**Last updated:** 2025-11-18

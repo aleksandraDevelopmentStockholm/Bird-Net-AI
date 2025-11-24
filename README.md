@@ -430,55 +430,62 @@ git push --tags
 pnpm build:prod:ios && pnpm build:prod:android
 ```
 
-## CI/CD & Automated Workflows
+## CI/CD & Testing
 
-> **🚧 Note:** GitHub Actions workflows are currently under development and may require additional configuration.
+BirdNet uses GitHub Actions for automated builds and E2E testing with **four powerful testing methods**:
 
-BirdNet uses GitHub Actions for automated app builds and testing.
+### Quick Start
+
+**For Daily Development:**
+```bash
+pnpm test-server &    # Start mock API
+pnpm android:dev      # Run app
+pnpm test:e2e         # Run E2E tests
+```
+
+**For CI/CD (No EAS Quota):**
+```bash
+gh workflow run e2e-android-docker.yml  # Android
+gh workflow run e2e-ios-native.yml     # iOS
+```
+
+**For Production Releases:**
+```bash
+gh workflow run e2e-test.yml -f platform=all -f build_mode=new
+```
 
 ### Available Workflows
 
-**App Build** - Build iOS/Android apps using EAS
+| Workflow | Purpose | EAS Quota | Platform |
+|----------|---------|-----------|----------|
+| **e2e-android-docker.yml** ⭐ | E2E with Docker build | No | Android |
+| **e2e-ios-native.yml** 🍎 | E2E with native build | No | iOS |
+| **e2e-test.yml** | E2E with EAS build | Yes | iOS/Android |
+| **app-build.yml** | App builds (EAS) | Yes | iOS/Android |
+
+**Why separate workflows?** Android uses Docker (Linux), iOS uses native Xcode builds (macOS) - both skip EAS quota!
+
+### Complete Documentation
+
+**📖 [.github/workflows/README.md](.github/workflows/README.md)** - Complete guide with:
+
+- All workflow details and usage
+- Local testing with Maestro
+- Docker build testing
+- Running workflows locally with Act
+- GitHub Actions setup
+- Troubleshooting guide
+
+### Quick Examples
 
 ```bash
-# Via GitHub CLI
-gh workflow run "App Build" -f profile=preview -f platform=all
+# E2E tests (free, no EAS!)
+gh workflow run e2e-android-docker.yml  # Android
+gh workflow run e2e-ios-native.yml     # iOS
 
-# Or use GitHub Actions UI: Actions → App Build → Run workflow
+# Build app with EAS
+gh workflow run app-build.yml -f profile=preview -f platform=all
 ```
-
-**E2E Test** - Run end-to-end tests with Maestro
-
-```bash
-# Test existing build
-gh workflow run "E2E Test" \
-  -f platform=android \
-  -f build_mode=existing \
-  -f fingerprint="<build-fingerprint>"
-
-# Build and test
-gh workflow run "E2E Test" -f platform=ios -f build_mode=new
-```
-
-### Setup GitHub Secrets
-
-Configure these in **Settings → Secrets → Actions**:
-
-| Secret                       | Description                       |
-| ---------------------------- | --------------------------------- |
-| `EXPO_TOKEN`                 | Expo authentication token         |
-| `EXPO_PUBLIC_EAS_PROJECT_ID` | EAS project ID                    |
-| `BIRDNET_API_URL_<ENV>`      | Environment-specific API endpoint |
-| `BIRDNET_API_KEY_<ENV>`      | Environment-specific API key      |
-
-**Get Expo Token:**
-
-```bash
-npx eas login
-npx eas whoami --json  # Copy "authToken" value
-```
-
-For detailed workflow documentation, see [.github/workflows/README.md](.github/workflows/README.md)
 
 ---
 
